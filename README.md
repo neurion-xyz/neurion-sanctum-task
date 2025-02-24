@@ -52,12 +52,12 @@ if __name__ == "__main__":
     Ion.create_self_hosting_ion(description, stake, fee_per_thousand_calls, capacities, my_ion_handler).start()
 ```
 
-### 2. Registering an Existing Server (Server-Ready Ion)
-If your Ion is already running and accessible, you can register it without hosting a new server.
+### 2. Starting a Pure Ion Server & Registering it
+If you want to set up multiple backend Ion servers and manually register them, you can start a **pure Ion server** first, note its public IP, and then use the registration function.
 
+#### **Step 1: Start the Pure Ion Server**
 ```python
 from neurion_ganglion.ion.ion import Ion
-from neurion_ganglion.types.capacity import Capacity
 from pydantic import BaseModel
 
 # Define Input Schema
@@ -70,13 +70,31 @@ class MyOutputSchema(BaseModel):
     message: str
     result: float
 
-# Register an existing Ion
+@ion_handler(MyInputSchema, MyOutputSchema)
+def my_ion_handler(data: MyInputSchema) -> MyOutputSchema:
+    """Handles execution logic."""
+    return MyOutputSchema(message="Success", result=12)
+
+# Start a pure Ion server
+if __name__ == "__main__":
+    Ion.start_pure_ion_server(my_ion_handler)
+```
+
+#### **Step 2: Manually Register the Running Ion Server**
+Once the pure Ion server is running, note its **IP address** and use the following script to register it:
+
+```python
+from neurion_ganglion.ion.ion import Ion
+from neurion_ganglion.types.capacity import Capacity
+
+# Define the details of the running Ion server
 if __name__ == "__main__":
     description = "My external Ion server"
     stake = 20000000
     fee_per_thousand_calls = 1
     capacities = [Capacity.SCRAPER, Capacity.AI_AGENT]
-    endpoints = ["http://167.99.69.198:8000"]
+    endpoints = ["http://<noted-public-ip>:8000"]  # Replace <noted-public-ip> with actual IP
+
     Ion.create_server_ready_ion(description, stake, fee_per_thousand_calls, capacities, MyInputSchema, MyOutputSchema, endpoints).register_ion()
 ```
 
@@ -89,4 +107,5 @@ curl http://localhost:8000/health
 
 ## License
 This project is licensed under the MIT License.
+
 
