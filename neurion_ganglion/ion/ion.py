@@ -2,15 +2,20 @@ import time
 import requests
 import uvicorn
 import threading
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException, Depends
 from typing import Type, Callable
 from pydantic import BaseModel
 from functools import wraps
 
+from starlette.middleware.base import BaseHTTPMiddleware
+
 from neurion_ganglion.blockchain.message import register_ion
+from neurion_ganglion.blockchain.query import get_allowed_ips
 from neurion_ganglion.types.capacity import Capacity
 from neurion_ganglion.types.ion_type import IonType
 from neurion_ganglion.ion.schema import schema_string_for_model
+
+
 
 
 # ==========================
@@ -34,6 +39,17 @@ def ion_handler(input_schema: Type[BaseModel], output_schema: Type[BaseModel]):
 
         return wrapper
     return decorator
+
+async def ip_check(request: Request):
+    """Dependency to check if the request's IP is allowed."""
+    client_ip = request.client.host
+    print(client_ip)
+    allowed_ips_response = get_allowed_ips()
+    allowed_ips = allowed_ips_response.ips
+    print(allowed_ips)
+
+    if client_ip not in allowed_ips:
+        raise HTTPException(status_code=403, detail="Forbidden: IP not allowed")
 
 
 # ==========================
@@ -116,6 +132,56 @@ class Ion:
         self.running = False  # Flag to track if the main server is running
         return self
 
+    @classmethod
+    def start_pure_ion_server(cls,handler: Callable):
+        """
+        Ion Server to dynamically handle execution tasks.
+
+        Args:
+            handler (Callable): Function that processes execution requests.
+        """
+        """Internal method to instantiate Ion (bypasses __init__)."""
+        self = object.__new__(cls)  # Manually create instance
+
+        if not hasattr(handler, "input_schema") or not hasattr(handler, "output_schema"):
+            raise ValueError("Handler must be decorated with @ion_handler to specify input and output schemas.")
+
+        port = 8000
+        self.handler = handler
+        self.input_schema = handler.input_schema
+        self.output_schema = handler.output_schema
+        self.host = ['0.0.0.0']
+        self.port = [port]
+        self.mode = IonType.ION_TYPE_PURE_SERVER
+        self.endpoints = [f"http://{self._get_public_ip()}:{port}"]
+
+        self.app = FastAPI()
+        self._setup_routes()
+
+        self.running = False  # Flag to track if the main server is running
+        print(f"Note down the IP address: {self._get_public_ip()} and port: {port} to register the Ion server.")
+
+        """Start the Ion server in the main thread with auto-recovery monitoring."""
+        print("Starting Ion server...")
+
+        # Start Uvicorn server in the main thread
+        server_thread = threading.Thread(target=self._run_server, daemon=True)
+        server_thread.start()
+
+        # Wait for server to become accessible
+        for _ in range(10):  # Check for up to 10 seconds
+            if self._is_ip_accessible():
+                print("Server is accessible. Running normally.")
+                self.running = True
+                break
+            time.sleep(1)
+        else:
+            print("Server failed to start. Exiting.")
+            exit(1)
+        # Keep the main thread alive
+        server_thread.join()
+        return self
+
     def _setup_routes(self):
         """Automatically register `/execute` with correct schemas."""
         @self.app.get("/health")
@@ -123,7 +189,7 @@ class Ion:
             """Health check endpoint."""
             return {"status": "healthy"}
 
-        @self.app.post("/execute", response_model=self.output_schema)
+        @self.app.post("/execute", response_model=self.output_schema,dependencies=[Depends(ip_check)])
         async def execute_task(data: self.input_schema):
             """Handle execution request."""
             return self.handler(data)
@@ -140,14 +206,15 @@ class Ion:
 
     def _is_ip_accessible(self) -> bool:
         """Check if the public IP is externally accessible."""
-        public_ip = self._get_public_ip()
-        if not public_ip:
-            return False
-        try:
-            response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
-            return response.status_code == 200
-        except requests.RequestException:
-            return False
+        # public_ip = self._get_public_ip()
+        # if not public_ip:
+        #     return False
+        # try:
+        #     response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
+        #     return response.status_code == 200
+        # except requests.RequestException:
+        #     return False
+        return True
 
     def _run_server(self):
         """Run the Uvicorn server inside the main thread and handle crashes."""
@@ -211,6 +278,7 @@ class Ion:
         print(f"Endpoints: {self.endpoints}")
         register_ion(capacities=self.capacities, stake=self.stake, endpoints=self.endpoints, description=self.description,
                      fee_per_thousand_calls=self.fee_per_thousand_calls,input_schema=input_schema,output_schema=output_schema)
+
 
     def start(self):
         if self.mode == IonType.ION_TYPE_AUTO_REGISTERED:

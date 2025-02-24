@@ -16,8 +16,9 @@ from neurionpy.protos.neurion.ganglion.query_pb2 import (
     QueryGetStakeRequest, QueryGetStakeResponse,
     QueryGetIonRequest, QueryGetIonResponse,
     QueryGetPathwayUnstakeInitiatedUsersRequest, QueryGetPathwayUnstakeInitiatedUsersResponse,
-    QueryGetAvailableIonsRequest, QueryGetAvailableIonsResponse
+    QueryGetAvailableIonsRequest, QueryGetAvailableIonsResponse, QueryGetAllowedIpsResponse, QueryGetAllowedIpsRequest
 )
+from functools import lru_cache
 from .client import get_query_client
 from .wallet import get_wallet
 
@@ -135,3 +136,9 @@ def get_available_ions(offset: int, limit: int) -> QueryGetAvailableIonsResponse
     """Query available Ions with pagination."""
     query_client = get_query_client()
     return query_client.GetAvailableIons(QueryGetAvailableIonsRequest(offset=offset, limit=limit))
+
+@lru_cache()
+def get_allowed_ips() -> QueryGetAllowedIpsResponse:
+    """Query allowed IPs."""
+    query_client = get_query_client()
+    return query_client.GetAllowedIps(QueryGetAllowedIpsRequest())

@@ -4,7 +4,7 @@ from neurionpy.protos.neurion.ganglion.tx_pb2 import (
     MsgRegisterPathway, MsgStakePathway, MsgRefundPathwayStake,
     MsgInitUnstakePathway, MsgClaimProtocolFee, MsgSettlePathwayStake,
     MsgStakeToGanglion, MsgClaimReward, MsgUnstakeFromGanglion,
-    MsgUpdatePathway, MsgRemoveIon
+    MsgUpdatePathway, MsgRemoveIon, MsgRemovePathway
 )
 from .client import get_message_client
 
@@ -174,4 +174,10 @@ def remove_ion() -> None:
     """Remove an Ion."""
     message_client = get_message_client()
     tx = message_client.RemoveIon(MsgRemoveIon())
+    tx.wait_to_complete()
+
+def remove_pathway() -> None:
+    """Remove a pathway."""
+    message_client = get_message_client()
+    tx = message_client.RemovePathway(MsgRemovePathway())
     tx.wait_to_complete()

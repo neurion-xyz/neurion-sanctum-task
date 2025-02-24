@@ -22,13 +22,15 @@ def my_ion_handler(data: MyInputSchema) -> MyOutputSchema:
 
 # Start Ion Server
 if __name__ == "__main__":
-    description = "My custom Ion server"
-    stake = 20000000
-    fee_per_thousand_calls = 1
-    capacities = [Capacity.SCRAPER, Capacity.AI_AGENT]
+    # description = "My custom Ion server"
+    # stake = 20000000
+    # fee_per_thousand_calls = 1
+    # capacities = [Capacity.SCRAPER, Capacity.AI_AGENT]
+    #
+    # # Start auto-hosted Ion server
+    # Ion.create_self_hosting_ion(description,stake,fee_per_thousand_calls,capacities,my_ion_handler).start()
 
-    # Start auto-hosted Ion server
-    Ion.create_self_hosting_ion(description,stake,fee_per_thousand_calls,capacities,my_ion_handler).start()
+    Ion.start_pure_ion_server(my_ion_handler)
 
 
     # Start Ion with custom host and port
