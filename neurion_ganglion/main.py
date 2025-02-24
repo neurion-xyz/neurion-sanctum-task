@@ -26,7 +26,11 @@ if __name__ == "__main__":
     stake = 20000000
     fee_per_thousand_calls = 1
     capacities = [Capacity.SCRAPER, Capacity.AI_AGENT]
+
+    # Start auto-hosted Ion server
     Ion.create_self_hosting_ion(description,stake,fee_per_thousand_calls,capacities,my_ion_handler).start()
-    #
+
+
+    # Start Ion with custom host and port
     # endpoints = ["http://167.99.69.198:8000"]
     # Ion.create_server_ready_ion(description,stake,fee_per_thousand_calls,capacities,MyInputSchema,MyOutputSchema,endpoints).register_ion()

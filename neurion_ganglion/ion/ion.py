@@ -140,15 +140,14 @@ class Ion:
 
     def _is_ip_accessible(self) -> bool:
         """Check if the public IP is externally accessible."""
-        # public_ip = self._get_public_ip()
-        # if not public_ip:
-        #     return False
-        # try:
-        #     response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
-        #     return response.status_code == 200
-        # except requests.RequestException:
-        #     return False
-        return True
+        public_ip = self._get_public_ip()
+        if not public_ip:
+            return False
+        try:
+            response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
+            return response.status_code == 200
+        except requests.RequestException:
+            return False
 
     def _run_server(self):
         """Run the Uvicorn server inside the main thread and handle crashes."""
