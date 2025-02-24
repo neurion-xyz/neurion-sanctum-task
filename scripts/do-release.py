@@ -57,7 +57,7 @@ class ReleaseTool:
     def get_current_version(self) -> Version:
         """Get current code version."""
         text = (ROOT / "pyproject.toml").read_text()
-        version = tomli.loads(text)["tool"]["poetry"]["version"]
+        version = tomli.loads(text)["project"]["version"]
         return Version(version)
 
     def make_tag(self, current_version: Version) -> None:
