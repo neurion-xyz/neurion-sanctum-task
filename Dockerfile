@@ -8,10 +8,12 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN pip install --no-cache-dir fastapi uvicorn requests
+RUN pip install --no-cache-dir fastapi uvicorn requests dotenv neurionpy
+
+ENV PYTHONPATH=/app
 
 # Expose the port the FastAPI app runs on
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "main.py"]
+CMD ["python", "./neurion_ganglion/main.py"]

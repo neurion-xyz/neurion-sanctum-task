@@ -496,14 +496,14 @@ referencing = ">=0.31.0"
 
 [[package]]
 name = "neurionpy"
-version = "0.13.0"
+version = "0.14.0"
 description = "Python library with the neurion networks"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "neurionpy-0.13.0-py3-none-any.whl", hash = "sha256:0bb620ed93e2852d7ffe32fa6148740af3b95de51a77051e19a331b2ae827f56"},
-    {file = "neurionpy-0.13.0.tar.gz", hash = "sha256:a20b2498b79b73d1bc01e30918d196a5f6d863cad4535cd90443153e2586b905"},
+    {file = "neurionpy-0.14.0-py3-none-any.whl", hash = "sha256:e94eefda6341638c932fcbb2696345de3f7eee5f75e4d395d65b9a48d346f6b6"},
+    {file = "neurionpy-0.14.0.tar.gz", hash = "sha256:54ed43fb3d118320b2308c56fdb7485ffe8515e368d2b55174cf7bc6371e0886"},
 ]
 
 [package.dependencies]
@@ -1104,4 +1104,4 @@ standard = ["colorama (>=0.4) ; sys_platform == \"win32\"", "httptools (>=0.6.3)
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "54e057d9d39fde198a5af0bd1a7e4bf46983de1c02619d479914bbb26fef6937"
+content-hash = "0e7fc61fc40b9a0ed6d0c50c86c65ddfd7107f25319dbe5a298ffae24c04d466"

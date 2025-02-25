@@ -1,18 +1,20 @@
+import random
 import time
 import requests
 import uvicorn
 import threading
 from fastapi import FastAPI, Request, HTTPException, Depends
 from typing import Type, Callable
+
+from neurionpy.synapse.config import NetworkConfig
 from pydantic import BaseModel
 from functools import wraps
-
-from starlette.middleware.base import BaseHTTPMiddleware
-
+from google.protobuf.json_format import MessageToDict
 from neurion_ganglion.blockchain.message import register_ion
-from neurion_ganglion.blockchain.query import get_allowed_ips
-from neurion_ganglion.types.capacity import Capacity
-from neurion_ganglion.types.ion_type import IonType
+from neurion_ganglion.blockchain.query import get_allowed_ips, ion_by_ion_address
+from neurion_ganglion.blockchain.wallet import get_wallet
+from neurion_ganglion.custom_types.capacity import Capacity
+from neurion_ganglion.custom_types.ion_type import IonType
 from neurion_ganglion.ion.schema import schema_string_for_model
 
 
@@ -62,11 +64,12 @@ class Ion:
         raise RuntimeError("Use `Ion.create(handler, host, port)` to create an Ion server.")
 
     @classmethod
-    def create_self_hosting_ion(cls,description:str,stake:int,fee_per_thousand_calls:int,capacities:[Capacity],handler: Callable):
+    def create_self_hosting_ion(cls,config:NetworkConfig,description:str,stake:int,fee_per_thousand_calls:int,capacities:[Capacity],handler: Callable):
         """
         Ion Server to dynamically handle execution tasks.
 
         Args:
+            config (NetworkConfig): Network configuration.
             description (str): Description of the Ion server.
             stake (int): Stake amount required to run the Ion server.
             fee_per_thousand_calls (int): Fee charged per 1000 calls to the Ion server.
@@ -81,6 +84,7 @@ class Ion:
             raise ValueError("Handler must be decorated with @ion_handler to specify input and output schemas.")
 
         port = 8000
+        self.config=config
         self.description = description
         self.stake = stake
         self.fee_per_thousand_calls = fee_per_thousand_calls
@@ -101,11 +105,12 @@ class Ion:
         return self
 
     @classmethod
-    def create_server_ready_ion(cls, description: str, stake: int, fee_per_thousand_calls: int, capacities: [Capacity],input_schema: Type[BaseModel], output_schema: Type[BaseModel],endpoints:[str]):
+    def create_server_ready_ion(cls, config:NetworkConfig,description: str, stake: int, fee_per_thousand_calls: int, capacities: [Capacity],input_schema: Type[BaseModel], output_schema: Type[BaseModel],endpoints:[str]):
         """
         Ion Server to dynamically handle execution tasks.
 
         Args:
+            config (NetworkConfig): Network configuration.
             description (str): Description of the Ion server.
             stake (int): Stake amount required to run the Ion server.
             fee_per_thousand_calls (int): Fee charged per 1000 calls to the Ion server.
@@ -117,6 +122,7 @@ class Ion:
         """Internal method to instantiate Ion (bypasses __init__)."""
         self = object.__new__(cls)  # Manually create instance
 
+        self.config=config
         self.description = description
         self.stake = stake
         self.fee_per_thousand_calls = fee_per_thousand_calls
@@ -133,11 +139,12 @@ class Ion:
         return self
 
     @classmethod
-    def start_pure_ion_server(cls,handler: Callable):
+    def start_pure_ion_server(cls,config:NetworkConfig,handler: Callable):
         """
         Ion Server to dynamically handle execution tasks.
 
         Args:
+            config (NetworkConfig): Network configuration.
             handler (Callable): Function that processes execution requests.
         """
         """Internal method to instantiate Ion (bypasses __init__)."""
@@ -147,6 +154,7 @@ class Ion:
             raise ValueError("Handler must be decorated with @ion_handler to specify input and output schemas.")
 
         port = 8000
+        self.config=config
         self.handler = handler
         self.input_schema = handler.input_schema
         self.output_schema = handler.output_schema
@@ -182,6 +190,40 @@ class Ion:
         server_thread.join()
         return self
 
+    @classmethod
+    def at_address(cls,config:NetworkConfig,address:str):
+        """
+        Ion at a specific address.
+
+        Args:
+            config (NetworkConfig): Network configuration.
+            address (str): Address of the Ion .
+        """
+        self = object.__new__(cls)  # Manually create instance
+
+        ion_response=ion_by_ion_address(address)
+        ion=ion_response.ion
+        ion_dict = MessageToDict(ion)
+        for key, value in ion_dict.items():
+            setattr(self, key, value)
+        self.config=config
+        self.ion_address=address
+        self.mode = IonType.ION_TYPE_CLIENT_ACCESSING
+        return self
+
+    def call(self,body: dict):
+        if self.mode != IonType.ION_TYPE_CLIENT_ACCESSING:
+            raise ValueError("Invalid Ion mode. Must be CLIENT_ACCESSING.")
+        print("Calling Ganglion server...")
+        # Get the ganglion server addresss
+        ips_response=get_allowed_ips(self.config)
+        ip=random.choice(ips_response.ips)
+        # get the endpoint of the ganglion server
+        ganglion_server_endpoint=f"http://{ip}:8000"
+        response = requests.post(f"{ganglion_server_endpoint}/ion/{self.ion_address}", json=body)
+        return response.json()
+
+
     def _setup_routes(self):
         """Automatically register `/execute` with correct schemas."""
         @self.app.get("/health")
@@ -206,15 +248,14 @@ class Ion:
 
     def _is_ip_accessible(self) -> bool:
         """Check if the public IP is externally accessible."""
-        # public_ip = self._get_public_ip()
-        # if not public_ip:
-        #     return False
-        # try:
-        #     response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
-        #     return response.status_code == 200
-        # except requests.RequestException:
-        #     return False
-        return True
+        public_ip = self._get_public_ip()
+        if not public_ip:
+            return False
+        try:
+            response = requests.get(f"http://{public_ip}:{self.port}/health", timeout=5)
+            return response.status_code == 200
+        except requests.RequestException:
+            return False
 
     def _run_server(self):
         """Run the Uvicorn server inside the main thread and handle crashes."""
@@ -276,9 +317,14 @@ class Ion:
         print(f"Input Schema: {input_schema}")
         print(f"Output Schema: {output_schema}")
         print(f"Endpoints: {self.endpoints}")
-        register_ion(capacities=self.capacities, stake=self.stake, endpoints=self.endpoints, description=self.description,
+        register_ion(self.config,capacities=self.capacities, stake=self.stake, endpoints=self.endpoints, description=self.description,
                      fee_per_thousand_calls=self.fee_per_thousand_calls,input_schema=input_schema,output_schema=output_schema)
+        ion_address=self._get_ion_address()
+        print(f"Ion registered successfully with address: {ion_address}")
 
+    def _get_ion_address(self):
+        wallet_address=str(get_wallet().address())
+        return wallet_address.replace('neurion','ion')
 
     def start(self):
         if self.mode == IonType.ION_TYPE_AUTO_REGISTERED:

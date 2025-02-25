@@ -53,7 +53,7 @@ def convert_field(field_schema, schema_defs=None):
     if "properties" in field_schema:
         return process_properties(field_schema["properties"], schema_defs)
 
-    # Process basic types AFTER checking for arrays and objects
+    # Process basic custom_types AFTER checking for arrays and objects
     if "type" in field_schema:
         if field_schema["type"] == "integer":
             return "int"
@@ -69,7 +69,7 @@ def convert_field(field_schema, schema_defs=None):
 
 
 def process_properties(properties, schema_defs=None):
-    """Process object properties recursively to extract types correctly."""
+    """Process object properties recursively to extract custom_types correctly."""
     processed = {}
     for key, value in properties.items():
         field_type = convert_field(value, schema_defs)
@@ -80,7 +80,7 @@ def process_properties(properties, schema_defs=None):
         elif isinstance(field_type, list) and isinstance(field_type[0], dict):
             processed[key] = field_type  # Handles nested lists properly
         else:
-            processed[key] = field_type  # Primitive types or unknown values
+            processed[key] = field_type  # Primitive custom_types or unknown values
 
     return processed
 

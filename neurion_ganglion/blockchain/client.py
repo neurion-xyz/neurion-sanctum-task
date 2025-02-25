@@ -4,11 +4,11 @@ from neurionpy.synapse.config import NetworkConfig
 from .wallet import get_wallet
 
 
-def get_query_client() -> GanglionQuery:
+def get_query_client(config:NetworkConfig) -> GanglionQuery:
     """Get query client."""
-    return NeurionClient(NetworkConfig.neurion_localnet(), get_wallet()).ganglion
+    return NeurionClient(config, get_wallet()).ganglion
 
 
-def get_message_client() -> GanglionMessage:
+def get_message_client(config:NetworkConfig) -> GanglionMessage:
     """Get message client."""
-    return NeurionClient(NetworkConfig.neurion_localnet(), get_wallet()).ganglion.tx
+    return NeurionClient(config, get_wallet()).ganglion.tx
