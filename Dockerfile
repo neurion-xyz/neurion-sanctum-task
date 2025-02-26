@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM --platform=linux/amd64 python:3.11
+FROM --platform=linux/amd64 python:3.12
 
 # Set the working directory in the container
 WORKDIR /app
@@ -8,7 +8,7 @@ WORKDIR /app
 COPY . .
 
 # Install dependencies
-RUN pip install --no-cache-dir fastapi uvicorn requests dotenv neurionpy
+RUN pip install --no-cache-dir "neurion-ganglion" dotenv
 
 ENV PYTHONPATH=/app
 
@@ -16,4 +16,4 @@ ENV PYTHONPATH=/app
 EXPOSE 8000
 
 # Run the application
-CMD ["python", "./neurion_ganglion/main.py"]
+CMD ["python", "main.py"]
