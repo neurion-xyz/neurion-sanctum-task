@@ -25,4 +25,4 @@ ENV PYTHONPATH=/app
 EXPOSE 8000
 
 # Command to run the FastAPI application
-CMD ["python","main.py"]
+CMD ["python","/app/main.py"]
