@@ -1,19 +1,28 @@
 # Use an official Python runtime as a parent image
-FROM --platform=linux/amd64 python:3.12
+FROM  python:3.12
 
 # Set the working directory in the container
 WORKDIR /app
 
-# Copy the current directory contents into the container
+# Install Poetry
+RUN pip install --no-cache-dir poetry
+
+# Copy the project files
+COPY pyproject.toml poetry.lock ./
+
+# Install dependencies using Poetry
+RUN poetry config virtualenvs.create false \
+    && poetry lock \
+    && poetry install --no-root --no-interaction --no-ansi
+
+# Copy the application source code
 COPY . .
 
-# Install dependencies
-RUN pip install --no-cache-dir "neurion-ganglion" dotenv
-
+# Set environment variables
 ENV PYTHONPATH=/app
 
-# Expose the port the FastAPI app runs on
+# Expose the port for FastAPI
 EXPOSE 8000
 
-# Run the application
-CMD ["python", "main.py"]
+# Command to run the FastAPI application
+CMD ["python","main.py"]
